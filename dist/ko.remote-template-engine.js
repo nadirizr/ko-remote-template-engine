@@ -1,5 +1,5 @@
-/*! ko.remote-template-engine - v1.0.0 - 2014-11-06
-* Copyright (c) 2014 ; Licensed  */
+/*! ko.remote-template-engine - v1.0.2 - 2015-04-02
+* Copyright (c) 2015 ; Licensed  */
 (function (root, factory) {
     if (typeof define === 'function' && define.amd) {
         // AMD. Register as an anonymous module.
@@ -23,7 +23,9 @@
         sources = {};
 
     engine.defaultPath = "templates";
+    engine.defaultExtraPaths = [];
     engine.defaultSuffix = ".tmpl.html";
+    engine.defaultUseCache = true;
     engine.ajax = function(options) {
         var xhr = new XMLHttpRequest();
         xhr.onreadystatechange = function() {
@@ -44,18 +46,35 @@
     };
 
     ko.templateSources.remoteTemplate.prototype.text = function () {
-        //when the template is retrieved, check if we need to load it
-        if (!this.requested && this.key) {
-            engine.ajax({
-                url: [addTrailingSlash(engine.defaultPath) + this.key + engine.defaultSuffix].join(""),
-                success: function (templateContent) {
-                    this.retrieved = true;
-                    this.template(templateContent);
-                }.bind(this)
-            });
+        var retrieveTemplate = function(currentUrl, extraUrls) {
+            //when the template is retrieved, check if we need to load it
+            if (!this.requested && this.key) {
+                var url = [addTrailingSlash(currentUrl) +
+                           this.key + engine.defaultSuffix +
+                           (engine.defaultUseCache ? "" :
+                            "?timestamp=" + (new Date().getTime()))].join("");
+                engine.ajax({
+                    url: url,
+                    success: function (templateContent) {
+                        this.retrieved = true;
+                        this.template(templateContent);
+                    }.bind(this),
+                    error: function () {
+                        if (extraUrls && extraUrls.length > 0) {
+                            retrieveTemplate(extraUrls[0], extraUrls.slice(1));
+                        }
+                    }.bind(this),
+                });
 
-            this.requested = true;
-        }
+                if (engine.defaultUseCache) {
+                  this.requested = true;
+                }
+            }
+        }.bind(this);
+
+        //call retrieveTemplate with the default URL, and if it fails continue
+        //with the extras.
+        retrieveTemplate(engine.defaultPath, engine.defaultExtraPaths);
 
         //if template is currently empty, then clear it
         if (!this.key) {
