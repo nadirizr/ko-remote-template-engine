@@ -1,4 +1,4 @@
-/*! ko.remote-template-engine - v1.0.2 - 2015-04-02
+/*! ko.remote-template-engine - v1.0.2 - 2015-04-05
 * Copyright (c) 2015 ; Licensed  */
 (function (root, factory) {
     if (typeof define === 'function' && define.amd) {
@@ -65,6 +65,7 @@
                     }.bind(this),
                     error: function () {
                         if (extraUrls && extraUrls.length > 0) {
+                            this.requested = false;
                             retrieveTemplate(extraUrls[0], extraUrls.slice(1));
                         }
                     }.bind(this),
